@@ -5,11 +5,11 @@ export interface MansaSubscription {
   id: string;
   customerName: string;
   customerPhone: string;
-  platform: "discord" | "telegram";
+  platform: "discord" | "telegram" | "mobile_money";
   platformUserId: string; // Discord User ID or Telegram User ID
   planName: string;
   amountXOF: number;
-  paymentMethod: "Orange Money" | "MTN MoMo" | "Wave" | "Moov";
+  paymentMethod: string;
   status: "active" | "expired" | "cancelled" | "pending";
   createdAt: string;
   expiresAt: string;

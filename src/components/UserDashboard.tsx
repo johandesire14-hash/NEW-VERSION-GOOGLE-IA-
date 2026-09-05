@@ -345,9 +345,15 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   const [isCompanyOnboardingOpen, setIsCompanyOnboardingOpen] = useState(false);
 
   const activeCompany = companies.find((c) => c.id === activeWorkspaceId) || null;
-  const activeSubscription = memberSubscriptions.find(
-    (s) => s.id === activeWorkspaceId || s.companyId === activeWorkspaceId
-  ) || null;
+  const isCreatorCompanySelected = Boolean(activeCompany);
+
+  // A member workspace is strictly when viewing an external community subscription (as client/fan),
+  // NEVER when viewing one's own creator company or personal workspace.
+  const activeSubscription = !isCreatorCompanySelected && activeWorkspaceId !== "personnel"
+    ? memberSubscriptions.find((s) => s.id === activeWorkspaceId || s.companyId === activeWorkspaceId) || null
+    : null;
+
+  const isMemberWorkspace = Boolean(activeSubscription);
 
   // Sync member subscriptions on new subscription
   useEffect(() => {
@@ -749,6 +755,19 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 
         {/* Right Navigation Icons */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Quick Create Product Button */}
+          <button
+            onClick={() => {
+              setEditingProduct(null);
+              setIsProductStudioOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer shadow-sm shadow-emerald-900/30 min-h-[36px]"
+            title={lang === "fr" ? "Créer un nouveau produit ou service" : "Create new product or service"}
+          >
+            <Plus className="size-3.5 stroke-[2.5]" />
+            <span className="hidden sm:inline">{lang === "fr" ? "Créer un produit" : "Create product"}</span>
+          </button>
+
           {/* Mobile Search Button (Quick icon-only tap) */}
           <button
             onClick={() => setIsSearchOpen(true)}
@@ -879,6 +898,22 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 
                 <button
                   onClick={() => {
+                    setActiveNav("produits");
+                    setIsProfileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs text-zinc-300 hover:bg-white/5 hover:text-white rounded-lg transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Package className="size-3.5 text-[#00D26A]" />
+                    <span>{lang === "fr" ? "Mes Produits & Boutique" : "Products & Store"}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-400 px-1.5 py-0.5 rounded bg-white/5">
+                    {productsList.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
                     setActiveNav("parametres_boutique");
                     setIsProfileMenuOpen(false);
                   }}
@@ -927,8 +962,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         </div>
       </header>
 
-      {/* 2. BODY CONTENT: ENTERPRISE WORKSPACE OR PERSONAL DASHBOARD */}
-      {activeWorkspaceId !== "personnel" ? (
+      {/* 2. BODY CONTENT: ENTERPRISE MEMBER WORKSPACE OR CREATOR DASHBOARD */}
+      {isMemberWorkspace && selectedSubscription ? (
         <div className="flex flex-1 overflow-hidden relative">
           <EnterpriseMemberView
             subscription={selectedSubscription}
@@ -937,7 +972,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
             allSubscriptions={memberSubscriptions}
             onSelectSubscription={(subId) => setActiveWorkspaceId(subId)}
             creatorCompanies={companies}
-            onSelectCreatorCompany={(comp) => setActiveWorkspaceId(comp.id)}
+            onSelectCreatorCompany={(comp) => {
+              setActiveWorkspaceId(comp.id);
+              setActiveNav("accueil");
+            }}
             user={user}
             onOpenMarketplace={() => {
               setActiveWorkspaceId("personnel");
@@ -1013,7 +1051,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                 return (
                   <button
                     key={comp.id}
-                    onClick={() => setActiveWorkspaceId(comp.id)}
+                    onClick={() => {
+                      setActiveWorkspaceId(comp.id);
+                      if (activeNav === "decouvrir" || activeNav === "favoris") {
+                        setActiveNav("accueil");
+                      }
+                    }}
                     className={`relative flex size-9 shrink-0 items-center justify-center rounded-xl overflow-hidden transition-all cursor-pointer ${
                       isActive
                         ? "border-2 border-white/90 shadow-sm ring-1 ring-[#00D26A]"
@@ -1045,7 +1088,25 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
             {/* Nav Menu */}
             <div>
               <div className="px-3 py-1 text-[11px] font-bold text-zinc-400 truncate flex items-center justify-between">
-                <span>{activeSubscription ? `Membre : ${activeSubscription.companyName}` : activeCompany ? activeCompany.name : "Personnel"}</span>
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="truncate text-white font-semibold">
+                    {activeSubscription ? `Membre : ${activeSubscription.companyName}` : activeCompany ? activeCompany.name : (lang === "fr" ? "Espace Personnel" : "Personal")}
+                  </span>
+                  {activeCompany && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold shrink-0">
+                      Entreprise
+                    </span>
+                  )}
+                </div>
+                {activeCompany && (
+                  <button
+                    onClick={() => setActiveWorkspaceId("personnel")}
+                    className="text-[10px] text-zinc-400 hover:text-white transition-colors cursor-pointer px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10"
+                    title="Revenir à l'espace personnel"
+                  >
+                    {lang === "fr" ? "Perso" : "Personal"}
+                  </button>
+                )}
                 {activeSubscription && (
                   <button
                     onClick={() => setActiveWorkspaceId("personnel")}
@@ -1070,6 +1131,63 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                   >
                     <Home className="size-4 text-zinc-300" />
                     <span>{lang === "fr" ? "Accueil" : "Home"}</span>
+                  </button>
+
+                  {/* Produits & Boutique */}
+                  <button
+                    onClick={() => switchTab("produits")}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      activeNav === "produits"
+                        ? "bg-[#22252c] text-white font-semibold"
+                        : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Package className="size-4 text-zinc-300" />
+                      <span>{lang === "fr" ? "Produits" : "Products"}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-400 px-1.5 py-0.5 rounded bg-white/5">
+                      {productsList.length}
+                    </span>
+                  </button>
+
+                  {/* Boutique & Site Web */}
+                  <button
+                    onClick={() => switchTab("sites_web")}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      activeNav === "sites_web"
+                        ? "bg-[#22252c] text-white font-semibold"
+                        : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                    }`}
+                  >
+                    <Globe className="size-4 text-zinc-300" />
+                    <span>{lang === "fr" ? "Boutique & Site Web" : "Store & Website"}</span>
+                  </button>
+
+                  {/* Paiements */}
+                  <button
+                    onClick={() => switchTab("paiements")}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      activeNav === "paiements"
+                        ? "bg-[#22252c] text-white font-semibold"
+                        : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                    }`}
+                  >
+                    <CreditCard className="size-4 text-zinc-300" />
+                    <span>{lang === "fr" ? "Paiement" : "Payments"}</span>
+                  </button>
+
+                  {/* Clients */}
+                  <button
+                    onClick={() => switchTab("clients")}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      activeNav === "clients"
+                        ? "bg-[#22252c] text-white font-semibold"
+                        : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                    }`}
+                  >
+                    <UsersIcon className="size-4 text-zinc-300" />
+                    <span>{lang === "fr" ? "Clients" : "Customers"}</span>
                   </button>
 
                   {/* Affiliés */}
@@ -1157,6 +1275,19 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                     <span className="text-[10px] font-mono text-zinc-400 px-1.5 py-0.5 rounded bg-white/5">
                       {productsList.length}
                     </span>
+                  </button>
+
+                  {/* Boutique & Site Web */}
+                  <button
+                    onClick={() => switchTab("sites_web")}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      activeNav === "sites_web"
+                        ? "bg-[#22252c] text-white font-semibold"
+                        : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                    }`}
+                  >
+                    <Globe className="size-4 text-zinc-300" />
+                    <span>{lang === "fr" ? "Boutique & Site Web" : "Store & Website"}</span>
                   </button>
 
                   {/* Paiements */}
@@ -1445,7 +1576,28 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                 {/* Nav Menu */}
                 <div>
                   <div className="px-3 py-1 text-[11px] font-bold text-zinc-400 truncate flex items-center justify-between">
-                    <span>{activeSubscription ? `Membre : ${activeSubscription.companyName}` : activeCompany ? activeCompany.name : "Personnel"}</span>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="truncate text-white font-semibold">
+                        {activeSubscription ? `Membre : ${activeSubscription.companyName}` : activeCompany ? activeCompany.name : (lang === "fr" ? "Espace Personnel" : "Personal")}
+                      </span>
+                      {activeCompany && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold shrink-0">
+                          Entreprise
+                        </span>
+                      )}
+                    </div>
+                    {activeCompany && (
+                      <button
+                        onClick={() => {
+                          setActiveWorkspaceId("personnel");
+                          setIsMobileSidebarOpen(false);
+                        }}
+                        className="text-[10px] text-zinc-400 hover:text-white transition-colors cursor-pointer px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10"
+                        title="Revenir à l'espace personnel"
+                      >
+                        {lang === "fr" ? "Perso" : "Personal"}
+                      </button>
+                    )}
                     {activeSubscription && (
                       <button
                         onClick={() => {
@@ -1471,6 +1623,63 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                       >
                         <Home className="size-4 text-zinc-300" />
                         <span>{lang === "fr" ? "Accueil" : "Home"}</span>
+                      </button>
+
+                      {/* Produits & Boutique */}
+                      <button
+                        onClick={() => switchTab("produits")}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors cursor-pointer min-h-[44px] ${
+                          activeNav === "produits"
+                            ? "bg-[#22252c] text-white font-semibold"
+                            : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Package className="size-4 text-zinc-300" />
+                          <span>{lang === "fr" ? "Produits" : "Products"}</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-400 px-1.5 py-0.5 rounded bg-white/5">
+                          {productsList.length}
+                        </span>
+                      </button>
+
+                      {/* Boutique & Site Web */}
+                      <button
+                        onClick={() => switchTab("sites_web")}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors cursor-pointer min-h-[44px] ${
+                          activeNav === "sites_web"
+                            ? "bg-[#22252c] text-white font-semibold"
+                            : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                        }`}
+                      >
+                        <Globe className="size-4 text-zinc-300" />
+                        <span>{lang === "fr" ? "Boutique & Site Web" : "Store & Website"}</span>
+                      </button>
+
+                      {/* Paiements */}
+                      <button
+                        onClick={() => switchTab("paiements")}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors cursor-pointer min-h-[44px] ${
+                          activeNav === "paiements"
+                            ? "bg-[#22252c] text-white font-semibold"
+                            : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                        }`}
+                      >
+                        <CreditCard className="size-4 text-zinc-300" />
+                        <span>{lang === "fr" ? "Paiement" : "Payments"}</span>
+                      </button>
+
+                      {/* Clients */}
+                      <button
+                        onClick={() => switchTab("clients")}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors cursor-pointer min-h-[44px] ${
+                          activeNav === "clients"
+                            ? "bg-[#22252c] text-white font-semibold"
+                            : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                        }`}
+                      >
+                        <UsersIcon className="size-4 text-zinc-300" />
+                        <span>{lang === "fr" ? "Clients" : "Customers"}</span>
                       </button>
 
                       <button
@@ -1552,6 +1761,19 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                         <span className="text-[10px] font-mono text-zinc-400 px-1.5 py-0.5 rounded bg-white/5">
                           {productsList.length}
                         </span>
+                      </button>
+
+                      {/* Boutique & Site Web */}
+                      <button
+                        onClick={() => switchTab("sites_web")}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors cursor-pointer min-h-[44px] ${
+                          activeNav === "sites_web"
+                            ? "bg-[#22252c] text-white font-semibold"
+                            : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                        }`}
+                      >
+                        <Globe className="size-4 text-zinc-300" />
+                        <span>{lang === "fr" ? "Boutique & Site Web" : "Store & Website"}</span>
                       </button>
 
                       <button
@@ -2572,6 +2794,19 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                 lang={lang}
                 user={user}
                 onNavigateToEnterprise={(subId) => setActiveWorkspaceId(subId)}
+              />
+            )
+          )}
+
+          {/* VIEW: SITES WEB & BOUTIQUE */}
+          {activeNav === "sites_web" && (
+            isTabLoading ? (
+              <div className="max-w-7xl mx-auto space-y-5">
+                <DashboardProductsSkeleton />
+              </div>
+            ) : (
+              <WebsitesView
+                lang={lang}
               />
             )
           )}

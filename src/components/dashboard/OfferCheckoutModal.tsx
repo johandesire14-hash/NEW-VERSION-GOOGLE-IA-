@@ -88,7 +88,7 @@ export const OfferCheckoutModal: React.FC<OfferCheckoutModalProps> = ({
   const [mobileMoneyValidation, setMobileMoneyValidation] = useState<PhoneValidationResult | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [customerEmail, setCustomerEmail] = useState<string>(user?.email || "johan@afhub.app");
-  const [customerName, setCustomerName] = useState<string>(user?.name || "Johan Désiré");
+  const customerName = user?.name || user?.displayName || "Client";
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
@@ -643,18 +643,6 @@ export const OfferCheckoutModal: React.FC<OfferCheckoutModalProps> = ({
                       onChange={(e) => setCustomerEmail(e.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-[#1b1e2a] px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-emerald-400"
                       placeholder="nom@exemple.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
-                      Nom complet :
-                    </label>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-[#1b1e2a] px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-emerald-400"
-                      placeholder="Prénom Nom"
                     />
                   </div>
                 </div>

@@ -5,6 +5,18 @@ const LEGACY_COMPANIES_STORAGE_PREFIX = "afhub_companies_";
 
 export const DEFAULT_DEMO_COMPANIES: Company[] = [
   {
+    id: "comp-cadre-financier",
+    name: "Cadre financier",
+    description: "Académie de trading, signaux VIP scalping et écosystème e-commerce Mansa.",
+    acceptedPayments: ["wave", "orange_money", "mtn_momo", "card"],
+    primaryCurrency: "XOF",
+    logoInitials: "FF",
+    colorGradient: "from-emerald-950 via-slate-900 to-black",
+    supportEmail: "contact@cadrefinancier.com",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
     id: "comp-mansa-ventures",
     name: "Mansa Capital Ventures",
     description: "Holding digitale & incubateur de créateurs africains à forte croissance.",
@@ -45,7 +57,15 @@ export function getSavedCompanies(userKey: string = "default"): Company[] {
       return DEFAULT_DEMO_COMPANIES;
     }
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Ensure default companies (like Cadre financier) are present if missing
+      const hasCadre = parsed.some((c: Company) => c.id === "comp-cadre-financier");
+      if (!hasCadre) {
+        parsed.unshift(DEFAULT_DEMO_COMPANIES[0]);
+        localStorage.setItem(`${COMPANIES_STORAGE_PREFIX}${userKey}`, JSON.stringify(parsed));
+      }
+      return parsed;
+    }
     localStorage.setItem(`${COMPANIES_STORAGE_PREFIX}${userKey}`, JSON.stringify(DEFAULT_DEMO_COMPANIES));
     return DEFAULT_DEMO_COMPANIES;
   } catch (err) {

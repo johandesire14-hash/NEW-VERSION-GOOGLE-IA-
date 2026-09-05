@@ -940,12 +940,6 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
         </div>
       )}
 
-      {/* Mobile Money Phone Validation Tester Modal */}
-      <MobileMoneyTesterModal
-        isOpen={isTesterModalOpen}
-        onClose={() => setIsTesterModalOpen(false)}
-      />
-
     </div>
   );
 };

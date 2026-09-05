@@ -45,6 +45,7 @@ import {
   ShoppingBag,
   Package,
   Camera,
+  Building2,
 } from "lucide-react";
 import { EnterpriseSubscription, TelegramChannelItem, DiscordChannelItem } from "../../types";
 import { TelegramIcon, DiscordIcon } from "./ConnectedAppsView";
@@ -129,6 +130,28 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
   const [currentSub, setCurrentSub] = useState<EnterpriseSubscription>(subscription);
   const [isBrandingModalOpen, setIsBrandingModalOpen] = useState(false);
 
+  // Security Check: ONLY the true creator owner of this company can modify its branding and elements
+  const isCompanyOwner = React.useMemo(() => {
+    // 1. Direct owner check if ownerId or creatorEmail is attached to subscription
+    const subOwnerId = (currentSub as any).ownerId;
+    const subCreatorEmail = (currentSub as any).creatorEmail;
+    if (user) {
+      if (subOwnerId && (subOwnerId === (user as any).uid || subOwnerId === user.email)) {
+        return true;
+      }
+      if (subCreatorEmail && subCreatorEmail === user.email) {
+        return true;
+      }
+    }
+    // 2. Check if current companyId exists in the user's creator companies list
+    if (creatorCompanies && creatorCompanies.length > 0) {
+      return creatorCompanies.some(
+        (c: any) => c && (c.id === currentSub.companyId || c.id === currentSub.id)
+      );
+    }
+    return false;
+  }, [creatorCompanies, currentSub.companyId, currentSub.id, (currentSub as any).ownerId, (currentSub as any).creatorEmail, user]);
+
   React.useEffect(() => {
     setCurrentSub(subscription);
   }, [subscription]);
@@ -160,6 +183,12 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
     companyBanner: string;
     companyLogo: string;
   }) => {
+    // Strict ownership verification: block non-creators
+    if (!isCompanyOwner) {
+      console.warn("Opération interdite : Seul le créateur propriétaire peut modifier son entreprise.");
+      return;
+    }
+
     const userKey = user?.email || "default";
     updateSubscriptionBranding(userKey, currentSub.companyId, {
       companyName: branding.name,
@@ -900,16 +929,18 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
               {/* Subtle gradient vignette to seamlessly transition to the dark canvas */}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0b0d] via-[#0a0b0d]/30 to-transparent pointer-events-none" />
 
-              {/* Company Banner Edit Button */}
-              <button
-                onClick={() => setIsBrandingModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs font-semibold shadow-lg transition-all cursor-pointer absolute top-3 right-3 z-20 active:scale-95"
-                title="Modifier la bannière et la photo de profil de l'entreprise"
-              >
-                <Camera className="size-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Configurer la bannière & logo</span>
-                <span className="sm:hidden">Bannière</span>
-              </button>
+              {/* Company Banner Edit Button - Accessible EXCLUSIVEMENT au créateur propriétaire */}
+              {isCompanyOwner && (
+                <button
+                  onClick={() => setIsBrandingModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs font-semibold shadow-lg transition-all cursor-pointer absolute top-3 right-3 z-20 active:scale-95"
+                  title="Modifier la bannière et la photo de profil de l'entreprise"
+                >
+                  <Camera className="size-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">Configurer la bannière & logo</span>
+                  <span className="sm:hidden">Bannière</span>
+                </button>
+              )}
 
               {/* Mobile / Tablet Top Navigation Bar over Banner */}
               <div className="absolute top-3 left-3 right-28 z-20 flex items-center justify-between lg:hidden pointer-events-auto">
@@ -950,26 +981,30 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 -mt-12 sm:-mt-18 md:-mt-22 mb-4">
                 <div className="flex items-end gap-3 sm:gap-5">
                   <div
-                    onClick={() => setIsBrandingModalOpen(true)}
-                    className="relative size-24 sm:size-36 md:size-40 rounded-2xl sm:rounded-3xl border-4 border-[#0a0b0d] bg-[#14161f] shadow-2xl overflow-hidden shrink-0 group cursor-pointer"
-                    title="Cliquer pour configurer la photo de profil / logo et la bannière"
+                    onClick={() => isCompanyOwner && setIsBrandingModalOpen(true)}
+                    className={`relative size-24 sm:size-36 md:size-40 rounded-2xl sm:rounded-3xl border-4 border-[#0a0b0d] bg-[#14161f] shadow-2xl overflow-hidden shrink-0 ${
+                      isCompanyOwner ? "group cursor-pointer" : "cursor-default select-none"
+                    }`}
+                    title={isCompanyOwner ? "Cliquer pour configurer la photo de profil / logo et la bannière" : currentSub.companyName}
                   >
                     {currentSub.companyLogo ? (
                       <img
                         src={currentSub.companyLogo}
                         alt={currentSub.companyName}
-                        className="size-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className={`size-full object-cover ${isCompanyOwner ? "group-hover:scale-105" : ""} transition-transform duration-300`}
                       />
                     ) : (
                       <div className="size-full bg-gradient-to-br from-indigo-950 via-slate-900 to-black flex items-center justify-center text-3xl sm:text-4xl font-black text-white">
                         {currentSub.companyInitials || currentSub.companyName.substring(0, 2).toUpperCase()}
                       </div>
                     )}
-                    {/* Hover overlay with Camera to edit */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 select-none">
-                      <Camera className="size-6 text-emerald-400" />
-                      <span className="text-[11px] font-bold text-center px-1">Modifier logo</span>
-                    </div>
+                    {/* Hover overlay with Camera to edit - Uniquement pour le créateur propriétaire */}
+                    {isCompanyOwner && (
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 select-none">
+                        <Camera className="size-6 text-emerald-400" />
+                        <span className="text-[11px] font-bold text-center px-1">Modifier logo</span>
+                      </div>
+                    )}
                     {/* Online status indicator */}
                     <span
                       className="absolute bottom-2 sm:bottom-2.5 right-2 sm:right-2.5 size-3 sm:size-4 rounded-full bg-emerald-400 ring-4 ring-[#0a0b0d]"
@@ -1030,16 +1065,18 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
 
                     {optionsDropdownOpen && (
                       <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-[#14161f] border border-white/10 shadow-2xl p-1.5 z-30 space-y-0.5 animate-in fade-in duration-150">
-                        <button
-                          onClick={() => {
-                            setIsBrandingModalOpen(true);
-                            setOptionsDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-emerald-400 hover:bg-white/5 transition-colors text-left font-medium"
-                        >
-                          <Camera className="size-3.5 text-emerald-400" />
-                          <span>Configurer bannière & logo</span>
-                        </button>
+                        {isCompanyOwner && (
+                          <button
+                            onClick={() => {
+                              setIsBrandingModalOpen(true);
+                              setOptionsDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-emerald-400 hover:bg-white/5 transition-colors text-left font-medium"
+                          >
+                            <Camera className="size-3.5 text-emerald-400" />
+                            <span>Configurer bannière & logo</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setActiveTab("telegram");
@@ -1048,7 +1085,7 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
                           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-300 hover:bg-white/5 hover:text-white transition-colors text-left"
                         >
                           <TelegramIcon className="size-3.5 text-[#229ED9]" />
-                          <span>Gérer Telegram VIP</span>
+                          <span>{isCompanyOwner ? "Gérer Telegram VIP" : "Canaux Telegram"}</span>
                         </button>
                         <button
                           onClick={() => {
@@ -1121,21 +1158,29 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
                     <span>Vérifié</span>
                   </span>
 
-                  {hasPaidOffer ? (
+                  {isCompanyOwner ? (
                     <span
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold"
-                      title="Membre avec offre active"
+                      className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold"
+                      title="Vous êtes le créateur et propriétaire officiel de cette entreprise"
+                    >
+                      <Building2 className="size-3.5" />
+                      <span>Créateur Propriétaire</span>
+                    </span>
+                  ) : hasPaidOffer ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-semibold"
+                      title="Membre avec pass VIP actif"
                     >
                       <CheckCircle2 className="size-3.5" />
                       <span>Membre VIP Actif</span>
                     </span>
                   ) : (
                     <span
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold"
-                      title="Adhésion simple sans offre payée"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-800/80 border border-zinc-700 text-zinc-300 text-xs font-semibold"
+                      title="Espace membre"
                     >
-                      <Lock className="size-3.5" />
-                      <span>Membre Simple (Sans offre)</span>
+                      <User className="size-3.5 text-zinc-400" />
+                      <span>Membre Client</span>
                     </span>
                   )}
                 </div>
@@ -3105,20 +3150,22 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
         />
       )}
 
-      {/* Enterprise Branding Configuration Modal */}
-      <EnterpriseBrandingModal
-        isOpen={isBrandingModalOpen}
-        onClose={() => setIsBrandingModalOpen(false)}
-        company={{
-          id: currentSub.companyId,
-          name: currentSub.companyName,
-          description: currentSub.productName,
-          companyBanner: currentSub.companyBanner,
-          companyLogo: currentSub.companyLogo,
-        }}
-        onSave={handleSaveBranding}
-        lang={lang}
-      />
+      {/* Enterprise Branding Configuration Modal - Restreint exclusivement au créateur propriétaire */}
+      {isCompanyOwner && (
+        <EnterpriseBrandingModal
+          isOpen={isBrandingModalOpen}
+          onClose={() => setIsBrandingModalOpen(false)}
+          company={{
+            id: currentSub.companyId,
+            name: currentSub.companyName,
+            description: currentSub.productName,
+            companyBanner: currentSub.companyBanner,
+            companyLogo: currentSub.companyLogo,
+          }}
+          onSave={handleSaveBranding}
+          lang={lang}
+        />
+      )}
     </div>
   );
 };

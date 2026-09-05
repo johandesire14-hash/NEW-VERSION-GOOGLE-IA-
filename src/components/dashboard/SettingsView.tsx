@@ -168,22 +168,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         bankAccountHolder: bankAccountHolder.trim(),
       });
 
-      // Synchronize locally saved companies & subscriptions
+      // Synchronize locally saved companies & subscriptions for the owned company only
       const userKey = user.uid || user.email || "default";
       const userCompanies = getSavedCompanies(userKey);
       if (userCompanies.length > 0) {
-        updateCompanyBranding(userKey, userCompanies[0].id, {
+        const ownedCompanyId = userCompanies[0].id;
+        updateCompanyBranding(userKey, ownedCompanyId, {
           name: storeName.trim(),
           description: storeTagline.trim(),
           companyBanner: companyBanner.trim(),
           companyLogo: companyLogo.trim(),
         });
+        updateSubscriptionBranding(userKey, ownedCompanyId, {
+          companyName: storeName.trim(),
+          companyBanner: companyBanner.trim(),
+          companyLogo: companyLogo.trim(),
+        });
       }
-      updateSubscriptionBranding(userKey, "comp-cadre-financier", {
-        companyName: storeName.trim(),
-        companyBanner: companyBanner.trim(),
-        companyLogo: companyLogo.trim(),
-      });
 
       window.dispatchEvent(
         new CustomEvent("mansa_profile_updated", {

@@ -130,6 +130,26 @@
         "createdAt": { "type": "string" }
       },
       "required": ["userId", "productId", "title"]
+    },
+    "companies": {
+      "title": "Companies",
+      "description": "Creator enterprises and business workspaces. Only the creator owner can update or delete their company.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "creatorEmail": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "companyBanner": { "type": "string" },
+        "companyLogo": { "type": "string" },
+        "primaryCurrency": { "type": "string" },
+        "acceptedPayments": { "type": "array", "items": { "type": "string" } },
+        "supportEmail": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["ownerId", "name"]
     }
   }
 }

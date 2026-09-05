@@ -55,6 +55,17 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // 9. Companies: Public read for storefront & member access; ONLY the creator owner can create, update or delete their company
+    match /companies/{companyId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.ownerId || 
+        request.auth.uid == resource.data.creatorId ||
+        request.auth.token.email == resource.data.creatorEmail
+      );
+    }
+
     // Default allow read and write across collections for seamless cloud syncing
     match /{document=**} {
       allow read, write: if true;
